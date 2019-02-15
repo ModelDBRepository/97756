@@ -1,0 +1,8 @@
+transvec.x[0] = 9.43583
+transvec.x[1] = 0.245801
+transvec.x[2] = 0.933771
+transvec.x[3] = 0.251256
+transvec.x[4] = 0.555681
+
+Update_graph=1
+tfunk()

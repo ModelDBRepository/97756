@@ -1,0 +1,4 @@
+// ga.hoc
+// for modularity this file was split into two pieces
+load_file("ga_setup.hoc")
+load_file("ga_run.hoc")

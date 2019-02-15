@@ -1,0 +1,11 @@
+load_file("ga_setup.hoc")
+
+startsw()
+GA()
+
+
+print "--------------------------Initiating PrAxis--------------------"
+
+attr_praxis(Tolorance, Best/5, 0)
+minchisq = fit_praxis(NP, "pfunk", &prax_par[0])
+

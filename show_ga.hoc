@@ -1,0 +1,7 @@
+// ga_trained.hoc
+// result from the end of 600 iterations of the GA
+
+{transvec.resize(0)}
+{transvec.append(17.46140, 0.01084, 0.01671, 0.01133, 0.02312)}
+Update_graph=1
+tfunk()

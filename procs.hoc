@@ -1,0 +1,13 @@
+proc ReadA()  {
+        dat_file.ropen($s1)
+        Ac_Vec.scanf(dat_file,ActNumPoints)
+	dat_file.close()
+}
+
+
+proc ReadD()  {
+        dat_file.ropen($s1)
+        Deac_Vec.scanf(dat_file,DeactNumPoints)
+        dat_file.close()
+}
+

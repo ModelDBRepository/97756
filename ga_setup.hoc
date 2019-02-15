@@ -1,0 +1,195 @@
+xopen("params.hoc")
+
+pop_size=NP*8               // size of the population.	
+Num_to_select=2             // elitism
+Mutate_prob=0.05            // initial probablity of mutation. 
+Cross_prob=0.50             // probability to crossover
+Switch_mut_mode = 300		// generation in which to move from total to incremental mutation
+Num_Total_Gen = 600         // Total number of generations to run before running PrAxis
+Best=1e50                   // curent best individual
+Elapsed=0                   // Total time of run
+
+objref pop,res,sort_ind,temp_pop,temp_res,avg_par,std_par,temp_vec,best_indiv,p_file
+
+p_file= new File()
+
+
+strdef brain,strmv
+
+pop=new Matrix(pop_size,NP)
+temp_pop=new Matrix(pop_size,NP)
+res=new Vector(pop_size,1e50)
+temp_res=new Vector(pop_size,1e50)
+sort_ind= new Vector(pop_size)
+temp_vec=new Vector(pop_size)
+best_indiv=new Vector(NP)
+
+LOAD_GENERATION=0	// if zero generates random initial population, if one load generation from file
+
+num_gen=0
+Tolorance=1e-4		//termination criterion (currently not implemented)
+startsw()
+xopen("NewFit.hoc")	//Fit functions
+
+//=======================MAIN LOOP================================
+proc GA(){local i,j,k
+
+	init_pop()
+    stopsw()
+	while(num_gen<=Num_Total_Gen){  // termination criterion besed on fixed # Generations
+      //while(Best>10){                                   // termination criterion besed on target score
+        sort_pop()
+	    Select_Best()
+       	POPULATE()
+		print_things()
+		Evaluate_pop()
+		num_gen+=1
+        Elapsed+=stopsw()
+	}
+ 	print "-------------------------------final parameters from the Genetic Algorithm----------------------------------"
+	for (j=0;j<=NP-1;j+=1) printf("%10.5f ",pop.x[0][j])
+    printf("\n")
+	g_file.close()
+}
+
+//-----------elitism operator selecting only best indiv for further breeding
+proc Select_Best(){local i,j
+
+	temp_pop.zero()
+	for (i=0;i<=Num_to_select-1;i+=1){
+		for (j=0;j<=NP-1;j+=1){
+			temp_pop.x[i][j]=pop.x[i][j]
+		}	
+	}
+}
+
+//-----------------create new population using crossover and mutation
+proc POPULATE(){local i,j,k,aba,ima,cross_point,cross1,cross2,temp1,temp2
+
+	//turnamant selection and one point crossover
+	for(i=Num_to_select;i<=pop_size-1;i+=2){
+		
+		aba=int((pop_size-1)*mcell_ran4(&highindex))		// turnament selection of father
+		temp1=int((pop_size-1)*mcell_ran4(&highindex))
+		if(res.x[temp1]<res.x[aba])  aba=temp1
+
+        ima=int((pop_size-1)*mcell_ran4(&highindex))            // turnament selection of mother
+        temp1=int((pop_size-1)*mcell_ran4(&highindex))
+        if(res.x[temp1]<res.x[ima])  ima=temp1
+
+		for(j=0;j<=NP-1;j+=1) {
+			temp_pop.x[i][j]=pop.x[aba][j]
+			temp_pop.x[i+1][j]=pop.x[ima][j]
+		}
+
+		if (mcell_ran4(&highindex)<=Cross_prob){
+			cross_point=int((NP-1)*mcell_ran4(&highindex))  	//point in genom for one point crossover 
+			for(j=cross_point;j<=NP-1;j+=1) {
+				temp_pop.x[i][j]=pop.x[ima][j] 
+				temp_pop.x[i+1][j]=pop.x[aba][j]
+			}		
+		}
+	}
+	//mutation for all but best individual using population stdev  - initial phase large steps
+	if(num_gen<Switch_mut_mode){
+		for(i=1;i<=pop_size-1;i+=1){
+			for(j=0;j<=NP-1;j+=1) {
+				if (mcell_ran4(&highindex)<Mutate_prob) temp_pop.x[i][j]=r[j].repick() 
+			}
+		}
+	}
+	if(num_gen>=Switch_mut_mode){
+                for(i=1;i<=pop_size-1;i+=1){
+                        for(j=0;j<=NP-1;j+=1) {
+                                if (mcell_ran4(&highindex)<Mutate_prob) temp_pop.x[i][j]*=rn.repick()
+                        }
+                }
+	}
+
+	pop=temp_pop.c()
+}
+
+//---------------------------------initialpopulation, random or from file -----------------	
+proc init_pop(){local i,j
+
+	if(LOAD_GENERATION==0){
+		for (i=0;i<=pop_size-1;i+=1){
+			for (j=0;j<=NP-1;j+=1)pop.x[i][j]=r[j].repick()
+		}
+	} else {
+		p_file.ropen("curr_population")
+		pop.scanf(p_file)
+		p_file.close()
+	}
+	Evaluate_pop()
+}
+
+//---------------------------------reset population save for best one-----------------	
+proc reset_pop(){local i,j,temp2
+	for (i=1;i<=pop_size-1;i+=1){
+		for (j=0;j<=NP-1;j+=1){
+                       	 pop.x[i][j]=abs(r[j].repick())
+		}
+	}
+}
+
+//----------------sorting of population 
+proc sort_pop(){local A,B,i,j,dumm
+
+	sort_ind=res.sortindex
+	for (i=0;i<=pop_size-1;i+=1){
+	        if(res.x[i]<Best){
+        	        best_indiv=pop.getrow(i)
+                	Best=res.x[i]
+        	}
+		A=sort_ind.x[i]
+		temp_res.x[i]=res.x[A]
+		for (j=0;j<=NP-1;j+=1){
+			temp_pop.x[i][j]=pop.x[A][j]
+		}	
+	}
+
+	pop=temp_pop.c
+	res=temp_res.c
+
+    //Graphic display of the best indiv
+    Update_graph=1
+    transvec=best_indiv.c
+	dumm=tfunk()
+    Update_graph=0
+       
+	//dumping best individual and entire population to files 
+	p_file.wopen("simp6.par")
+    best_indiv.printf(p_file,"%g \t")
+    p_file.close()
+	p_file.wopen("curr_population")
+	pop.fprint(p_file,"%g\t","\n")
+	p_file.close()	
+}
+
+//-------------evaluate each individual. modify to add parallel work
+
+proc Evaluate_pop(){local i,j,count
+	temp_chi=0
+	for (i=0;i<=pop_size-1;i+=1){ 
+		for(j=0;j<=NP-1;j+=1) transvec.x[j]=pop.x[i][j]
+		res.x[i]=tfunk()
+	}
+}
+
+//----------------------output function - the consol outupt is commented out in order to use the xpaenl
+proc print_things(){local j
+
+	//printf("[Generation # %g]  ",num_gen)
+	g_file.printf("%g\t  ",num_gen)
+	for (j=0;j<=NP-1;j+=1) {
+		//printf("%10.5f \t",best_indiv.x[j]) 
+		g_file.printf("%10.5f \t",best_indiv.x[j])
+        prax_par[j]=best_indiv.x[j]
+	}
+	//printf("%15.7e\n",Best)
+	g_file.printf("%15.7e\n",Best)
+	g_file.flush()
+	//pop.printf("%5.6f ")
+}
+

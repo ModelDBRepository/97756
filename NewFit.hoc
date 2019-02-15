@@ -1,0 +1,144 @@
+
+
+xpanel("Best Individual Parameter Values")
+xvalue("Generation #     ", "num_gen")
+xvalue("Num PrAxis Iterations", "NUM_ITER")
+xlabel("----------------------------")
+xvalue(" Elapsed Time (Minutes)  ", "int(Elapsed/60)")
+xlabel("----------------------------")
+xvalue("Gbar             ", "transvec.x[0]")
+xvalue("A12              ", "transvec.x[1]")
+xvalue("A21              ", "transvec.x[2]")
+xvalue("Z12              ", "transvec.x[3]")
+xvalue("Z21              ", "transvec.x[4]")
+xlabel("----------------------------")
+xvalue("Score            ", "Best")
+xpanel()
+
+
+objref ga,gd
+
+ga = new Graph()
+gd = new Graph()
+
+ga.color(2)
+gd.color(2)
+
+proc WriteVecA() {local count
+	count=0
+    if (Update_graph) ga.erase()
+        for i=5, $1 {
+                stim.dur1 = 450
+                stim.dur2 = 400
+                stim.dur3 = 0
+                stim.dur4 = 0
+                stim.amp1 = -110
+                stim.amp2 = -80+10*(i-1)
+                stim.amp3 = -110
+                stim.amp4 = 0
+                stim.rs = 0.00000005
+
+                finitialize(-65)
+                dt=0.5
+                tstop=450
+                while (t < tstop) fadvance()
+                dt=0.1
+                tstop=600
+                
+                if (Update_graph) ga.beginline()
+                while (t < tstop) {
+                    fadvance()
+                    Act_Sim_Vec.x[count]= soma.g_KCHANNEL*(v(0.5)-ek)*area(0.5)/1000
+                    if (Update_graph) ga.line(t, Act_Sim_Vec.x[count])
+                    if (Update_graph) ga.mark(t,Ac_Vec.x[count],"o",0.2,3,1)
+                    count+=1
+                }
+	}
+	Act_Sim_Vec.sub(Ac_Vec)
+ 	summary_a= Act_Sim_Vec.sumsq()
+    if (Update_graph) ga.exec_menu("View = plot")
+    if (Update_graph) ga.exec_menu("Erase Axis")
+}
+
+
+
+proc WriteVecD() { local count
+	count=0
+if (Update_graph) gd.erase()
+        for i=1, $1 {
+                stim.dur1 = 100
+                stim.dur2 = 20
+                stim.dur3 = 200
+                stim.dur4 = 0
+                stim.amp1 = -110
+                stim.amp2 = 80
+                stim.amp3 = -120+10*(i-1)
+                stim.amp4 = 0
+                stim.rs = 0.00000005
+
+                finitialize(-65)
+                dt=0.1
+                tstop=120.2
+                while (t < tstop) fadvance()
+                dt=0.02
+                tstop=175.9
+                if (Update_graph) gd.beginline()
+                while (t < tstop) {
+                        fadvance()
+                        Deac_Sim_Vec.x[count]= soma.g_KCHANNEL*(v(0.5)-ek)*area(0.5)/1000
+                        if (Update_graph) gd.line(t, Deac_Sim_Vec.x[count])
+                        if (Update_graph) gd.mark(t,Deac_Vec.x[count],"o",0.2,3,1)
+
+                        count+=1
+                }
+	
+	}
+        Deac_Sim_Vec.sub(Deac_Vec)
+        summary_d= Deac_Sim_Vec.sumsq()
+    if (Update_graph) gd.exec_menu("View = plot")
+    if (Update_graph) gd.exec_menu("Erase Axis")
+    if (Update_graph) ga.flush()
+    if (Update_graph) gd.flush()  
+    if (Update_graph)  doNotify()
+
+}
+
+
+
+
+func tfunk(){local Chisq,dumm,dummc
+	
+	Chisq=0
+	//set densities
+        gbar_KCHANNEL=transvec.x(0)
+        a12_KCHANNEL=transvec.x(1)
+        a21_KCHANNEL=transvec.x(2)
+        z12_KCHANNEL=transvec.x(3)
+        z21_KCHANNEL=transvec.x(4)
+       
+        WriteVecA(15)
+
+        WriteVecD(12)
+
+        Chisq=(summary_a+summary_d)/TotalPoints
+        return Chisq
+}
+
+
+
+func pfunk(){local Chisq,dumm,dummc,j
+        Chisq=0
+        Update_graph=0
+        for (j=0;j<=NP-1;j+=1) transvec.x(j)=abs($&2[j])
+        Chisq=tfunk()
+        if (Chisq<Best){
+            Best=Chisq
+            Update_graph=1
+            Chisq=tfunk()
+            //printf("[PrAxis Iter # %g]  ",NUM_ITER)
+            //for (j=0;j<=NP-1;j+=1) printf("%10.5f \t",best_indiv.x[j]) 
+            //printf("%15.7e\n",Best)
+        }
+        NUM_ITER+=1
+        return Chisq
+}

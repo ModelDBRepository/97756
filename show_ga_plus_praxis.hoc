@@ -1,0 +1,8 @@
+// show_result.hoc
+// A model found at the end of training is (immediately) loaded and graphed.
+
+print "model trained through 600 GA populations and 2815 praxis iterations"
+{transvec.resize(0)}
+{transvec.append(18.9848, 0.0103874, 0.0189799, 0.0104511, 0.0210019)}
+Update_graph=1
+tfunk()

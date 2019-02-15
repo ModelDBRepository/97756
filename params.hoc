@@ -1,0 +1,79 @@
+
+load_file("nrngui.hoc")
+create soma
+access soma
+
+soma {
+	nseg = 1
+	diatstop = i
+	L = 20
+	diam=20
+	Ra = 150
+	insert KCHANNEL
+	gbar_KCHANNEL=0
+        ek = -103
+	insert pas
+	g_pas = 0.00003334
+}
+
+ActNumPoints = 16511
+DeactNumPoints = 33432
+TotalPoints = ActNumPoints+DeactNumPoints
+
+objectvar stim
+soma stim = new SEClamp1(0.5)
+
+objref Ac_Vec, Act_Sim_Vec, Deac_Vec, Deac_Sim_Vec, gAct, gDeact, rn
+Ac_Vec = new Vector(ActNumPoints)
+Act_Sim_Vec = new Vector(ActNumPoints)
+Deac_Vec = new Vector(DeactNumPoints)
+Deac_Sim_Vec = new Vector(DeactNumPoints)
+
+t=0
+dt=0.05
+NP=5
+MP=NP+1
+
+objref dat_file
+dat_file= new File()
+
+objref transvec,varvec,minvec,maxvec
+transvec = new Vector(NP)
+varvec = new Vector(NP)
+minvec = new Vector()
+maxvec = new Vector()
+
+minvec.append(0,0,0,0,0)
+maxvec.append(50,1,1,1,1)
+
+// random numbers and initial boundries for the population
+objref  r[NP]
+
+highindex = 11         
+lowindex = mcell_ran4_init()  
+
+for (j=0;j<=NP-1;j+=1){
+        r[j] = new Random()
+        r[j].MCellRan4(highindex+j*j)
+        r[j].uniform(minvec.x[j],maxvec.x[j])
+}
+
+rn = new Random()
+rn.MCellRan4(1)
+rn.normal(1,0.05)
+
+xopen("procs.hoc")
+
+ReadA("data/Act_data")
+ReadD("data/Deact_data")
+
+//open main log file
+objref g_file
+g_file = new File()
+g_file.wopen("ga_log.txt")
+
+double prax_par[NP]
+Tolorance=1e-8
+minchisq=0
+NUM_ITER=0
+
